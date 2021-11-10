@@ -1,6 +1,6 @@
 from telegram.ext import (
     Updater, CommandHandler, MessageHandler, Filters,
-    ConversationHandler, RegexHandler, CallbackQueryHandler
+    ConversationHandler, RegexHandler
 )
 import logging
 from environs import Env
@@ -8,7 +8,11 @@ from telegram import ReplyKeyboardMarkup
 from questions import questions
 from database import cache
 import re
-import random
+from common_utils import (
+    get_next_question,
+    get_cleaned_text,
+    get_answer
+)
 
 
 log = logging.getLogger(__name__)
@@ -24,18 +28,6 @@ def start(bot, update):
         reply_markup=reply_markup
     )
     return NEW_QUESTION
-
-
-def get_next_question(questions, user):
-    ind = random.randint(0, len(questions))
-    return questions[ind]['question']
-
-
-def get_answer(questions, question):
-    for index, dict_ in enumerate(questions):
-            if dict_['question'] == question:
-                answer = dict_['answer'].partition("\n")[2].partition('.')[0].partition('(')[0]
-                return answer
 
 
 def handle_new_question_request(bot, update, user_data):
@@ -57,12 +49,15 @@ def error(bot, update, error):
 def done():
     return ConversationHandler.END
 
+
 def give_up(bot, update, user_data):
     user = f'tg-{update.message.chat.id}'
     current_question = cache.get(user)
     answer = get_answer(questions, current_question)
 
-    update.message.reply_text(f'Правильный ответ:\n\n{answer}', reply_markup=reply_markup)
+    update.message.reply_text(
+        f'Правильный ответ:\n\n{answer}', reply_markup=reply_markup
+    )
 
     question = get_next_question(questions, user)
     cache.set(user, question)
@@ -75,29 +70,36 @@ def handle_solution_attempt(bot, update, user_data):
     user = f'tg-{update.message.chat.id}'
     current_question = cache.get(user)
     answer = get_answer(questions, current_question)
+
+    cleaned_answer = get_cleaned_text(answer)
+    cleaned_input = get_cleaned_text(str(update.message.text))
+
+    pattern = re.compile(cleaned_answer)
+
     pattern = re.compile(answer.lower())
-    if pattern.match(str(update.message.text).lower()):
+    if pattern.match(cleaned_input):
         update.message.reply_text(
-            f'Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»',
+            """Правильно! Поздравляю!
+            Для следующего вопроса нажми «Новый вопрос»""",
             reply_markup=reply_markup
         )
-        if not 'score' in user_data:
+        if 'score' not in user_data:
             user_data['score'] = 1
         else:
             user_data['score'] += 1
         return NEW_QUESTION
     update.message.reply_text(
-            f'Неправильно… Попробуешь ещё раз?',
+            'Неправильно… Попробуешь ещё раз?',
             reply_markup=reply_markup
         )
     return CHECK_ANSWER
 
 
 def score(bot, update, user_data):
-    if not 'score' in user_data:
-            user_data['score'] = 0
+    if 'score' not in user_data:
+        user_data['score'] = 0
     update.message.reply_text(
-        f"Это мой счёт\n\n{user_data['score']}",
+        f"Ваш счёт\n\n{user_data['score']}",
         reply_markup=reply_markup
     )
     return NEW_QUESTION
@@ -112,34 +114,73 @@ def main(token):
     conv_handler = ConversationHandler(
             entry_points=[
                 CommandHandler('start', start),
-                RegexHandler('^(Новый вопрос)$', handle_new_question_request, 
-                                            pass_user_data=True),
-                RegexHandler('^Сдаться$', give_up, pass_user_data=True),
-                RegexHandler('^(Мой счёт)$', score, pass_user_data=True),
+                RegexHandler(
+                    '^(Новый вопрос)$',
+                    handle_new_question_request,
+                    pass_user_data=True
+                ),
+                RegexHandler(
+                    '^Сдаться$',
+                    give_up,
+                    pass_user_data=True
+                ),
+                RegexHandler(
+                    '^(Мой счёт)$',
+                    score,
+                    pass_user_data=True
+                ),
             ],
 
             states={
                 NEW_QUESTION: [
-                    RegexHandler('^(Новый вопрос)$', handle_new_question_request, 
-                                            pass_user_data=True),
-                    RegexHandler('^Сдаться$', give_up, pass_user_data=True),
-                    RegexHandler('^(Мой счёт)$', score, pass_user_data=True),
+                    RegexHandler(
+                        '^(Новый вопрос)$',
+                        handle_new_question_request,
+                        pass_user_data=True
+                    ),
+                    RegexHandler(
+                        '^Сдаться$',
+                        give_up,
+                        pass_user_data=True
+                    ),
+                    RegexHandler(
+                        '^(Мой счёт)$',
+                        score,
+                        pass_user_data=True
+                    ),
                 ],
 
                 GIVE_UP: [
-                    RegexHandler('^(Мой счёт)$', score, pass_user_data=True),
-                    RegexHandler('^Сдаться$', give_up, pass_user_data=True),
-                    
+                    RegexHandler(
+                        '^(Мой счёт)$',
+                        score,
+                        pass_user_data=True
+                    ),
+                    RegexHandler(
+                        '^Сдаться$',
+                        give_up,
+                        pass_user_data=True
+                    ),
                 ],
                 CHECK_ANSWER: [
-                    RegexHandler('^(Мой счёт)$', score, pass_user_data=True),
-                    RegexHandler('^Сдаться$', give_up, pass_user_data=True),
-                    MessageHandler(Filters.text,
-                                            handle_solution_attempt,
-                                            pass_user_data=True),
-                    
+                    RegexHandler(
+                        '^(Мой счёт)$',
+                        score,
+                        pass_user_data=True
+                    ),
+                    RegexHandler(
+                        '^Сдаться$',
+                        give_up, pass_user_data=True
+                    ),
+                    MessageHandler(
+                        Filters.text,
+                        handle_solution_attempt,
+                        pass_user_data=True
+                    ),
                 ],
-                SCORE: [RegexHandler('^(Мой счёт)$', score, pass_user_data=True),],
+                SCORE: [
+                    RegexHandler('^(Мой счёт)$', score, pass_user_data=True),
+                ],
             },
 
             fallbacks=[
@@ -162,7 +203,9 @@ if __name__ == '__main__':
 
     token = env('TELEGRAM_TOKEN')
 
-    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                        level=logging.INFO)
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO
+    )
 
     main(token)

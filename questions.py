@@ -15,4 +15,3 @@ def read_file(filepath):
 
 
 questions = read_file('quiz-questions/120br.txt')
-

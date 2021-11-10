@@ -4,7 +4,7 @@ import logging
 
 
 log = logging.getLogger(__name__)
-#redis_db = redis.Redis(host='redis-19431.c250.eu-central-1-1.ec2.cloud.redislabs.com', port=19431, password='A0BzrrydytknPEFu4Su5jijSetrFB3PX', db=0)
+
 
 class Cache(redis.Redis):
     def __init__(self, host, port, password,
