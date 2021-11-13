@@ -119,16 +119,6 @@ def main(token):
                     handle_new_question_request,
                     pass_user_data=True
                 ),
-                RegexHandler(
-                    '^Сдаться$',
-                    give_up,
-                    pass_user_data=True
-                ),
-                RegexHandler(
-                    '^(Мой счёт)$',
-                    score,
-                    pass_user_data=True
-                ),
             ],
 
             states={
