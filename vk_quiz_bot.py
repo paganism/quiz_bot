@@ -7,7 +7,7 @@ import logging
 from environs import Env
 from questions import questions
 import re
-from common_utils import (
+from questions_functions import (
     get_next_question,
     get_cleaned_text,
     get_answer

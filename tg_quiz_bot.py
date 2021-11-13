@@ -8,7 +8,7 @@ from telegram import ReplyKeyboardMarkup
 from questions import questions
 from database import cache
 import re
-from common_utils import (
+from questions_functions import (
     get_next_question,
     get_cleaned_text,
     get_answer
