@@ -18,14 +18,14 @@ from questions_functions import (
 log = logging.getLogger(__name__)
 
 NEW_QUESTION, CHECK_ANSWER, GIVE_UP, SCORE = range(4)
-custom_keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счёт']]
-reply_markup = ReplyKeyboardMarkup(custom_keyboard)
+CUSTOM_KEYBOARD = [['Новый вопрос', 'Сдаться'], ['Мой счёт']]
+REPLY_MARKUP = ReplyKeyboardMarkup(CUSTOM_KEYBOARD)
 
 
 def start(bot, update):
     update.message.reply_text(
         'Привет, я бот для викторин',
-        reply_markup=reply_markup
+        reply_markup=REPLY_MARKUP
     )
     return NEW_QUESTION
 
@@ -37,7 +37,7 @@ def handle_new_question_request(bot, update, user_data):
     cache.set(user, question)
     update.message.reply_text(
             question,
-            reply_markup=reply_markup
+            reply_markup=REPLY_MARKUP
         )
     return CHECK_ANSWER
 
@@ -56,12 +56,12 @@ def give_up(bot, update, user_data):
     answer = get_answer(questions, current_question)
 
     update.message.reply_text(
-        f'Правильный ответ:\n\n{answer}', reply_markup=reply_markup
+        f'Правильный ответ:\n\n{answer}', reply_markup=REPLY_MARKUP
     )
 
     question = get_next_question(questions, user)
     cache.set(user, question)
-    update.message.reply_text(f'{question}', reply_markup=reply_markup)
+    update.message.reply_text(f'{question}', reply_markup=REPLY_MARKUP)
 
     return CHECK_ANSWER
 
@@ -81,7 +81,7 @@ def handle_solution_attempt(bot, update, user_data):
         update.message.reply_text(
             """Правильно! Поздравляю!
             Для следующего вопроса нажми «Новый вопрос»""",
-            reply_markup=reply_markup
+            reply_markup=REPLY_MARKUP
         )
         if 'score' not in user_data:
             user_data['score'] = 1
@@ -90,7 +90,7 @@ def handle_solution_attempt(bot, update, user_data):
         return NEW_QUESTION
     update.message.reply_text(
             'Неправильно… Попробуешь ещё раз?',
-            reply_markup=reply_markup
+            reply_markup=REPLY_MARKUP
         )
     return CHECK_ANSWER
 
@@ -100,7 +100,7 @@ def score(bot, update, user_data):
         user_data['score'] = 0
     update.message.reply_text(
         f"Ваш счёт\n\n{user_data['score']}",
-        reply_markup=reply_markup
+        reply_markup=REPLY_MARKUP
     )
     return NEW_QUESTION
 
